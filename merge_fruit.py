@@ -6,13 +6,16 @@ import os
 
 pygame.init()
 
-WIDTH = 400
-HEIGHT = 600
+WIDTH = 600
+HEIGHT = 900
 FPS = 60
 GRAVITY = 0.5
-BOUNCE = 0.6
+BOUNCE = 0.2
+DAMPING = 0.95
+WALL_FRICTION = 0.7
 MAX_FRUITS = 11
 DEATH_LINE = 150
+COLLISION_ITERATIONS = 5
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Merge Watermelon")
@@ -24,16 +27,16 @@ GRAY = (200, 200, 200)
 BROWN = (139, 69, 19)
 
 FRUIT_TYPES = [
-    {"name": "cherry", "radius": 30, "color": (255, 0, 0), "points": 1},
+    {"name": "grape", "radius": 30, "color": (255, 0, 0), "points": 1},
     {"name": "strawberry", "radius": 40, "color": (255, 100, 100), "points": 3},
-    {"name": "grape", "radius": 50, "color": (128, 0, 128), "points": 6},
+    {"name": "lemon", "radius": 50, "color": (128, 0, 128), "points": 6},
     {"name": "orange", "radius": 60, "color": (255, 165, 0), "points": 10},
-    {"name": "apple", "radius": 70, "color": (255, 69, 0), "points": 15},
-    {"name": "pear", "radius": 80, "color": (255, 215, 0), "points": 21},
+    {"name": "kiwi", "radius": 70, "color": (255, 69, 0), "points": 15},
+    {"name": "tomato", "radius": 80, "color": (255, 215, 0), "points": 21},
     {"name": "peach", "radius": 90, "color": (255, 182, 193), "points": 28},
     {"name": "pineapple", "radius": 100, "color": (255, 200, 50), "points": 36},
-    {"name": "melon", "radius": 110, "color": (144, 238, 144), "points": 45},
-    {"name": "watermelon", "radius": 120, "color": (0, 128, 0), "points": 55},
+    {"name": "coconut", "radius": 110, "color": (144, 238, 144), "points": 45},
+    {"name": "half-watermelon", "radius": 120, "color": (0, 128, 0), "points": 55},
     {"name": "big_watermelon", "radius": 140, "color": (0, 100, 0), "points": 66}
 ]
 
@@ -75,58 +78,33 @@ class Fruit:
 
     def update(self, fruits):
         self.vy += GRAVITY
+        
+        self.vx *= DAMPING
+        self.vy *= DAMPING
+        
         self.x += self.vx
         self.y += self.vy
 
         if self.x - self.radius < 0:
             self.x = self.radius
             self.vx = -self.vx * BOUNCE
+            self.vy *= WALL_FRICTION
         if self.x + self.radius > WIDTH:
             self.x = WIDTH - self.radius
             self.vx = -self.vx * BOUNCE
+            self.vy *= WALL_FRICTION
         if self.y + self.radius > HEIGHT - 20:
             self.y = HEIGHT - 20 - self.radius
             self.vy = -self.vy * BOUNCE
-            if abs(self.vy) < 1:
+            self.vx *= WALL_FRICTION
+            if abs(self.vy) < 0.3:
                 self.vy = 0
                 self.falling = False
-
-        for fruit in fruits:
-            if fruit != self and not fruit.merged and not self.merged:
-                dx = self.x - fruit.x
-                dy = self.y - fruit.y
-                dist = math.sqrt(dx * dx + dy * dy)
-                min_dist = self.radius + fruit.radius
-
-                if dist < min_dist and dist > 0:
-                    overlap = min_dist - dist
-                    nx = dx / dist
-                    ny = dy / dist
-                    
-                    total_mass = self.radius * self.radius + fruit.radius * fruit.radius
-                    ratio1 = (fruit.radius * fruit.radius) / total_mass
-                    ratio2 = (self.radius * self.radius) / total_mass
-                    
-                    self.x += nx * overlap * ratio1
-                    self.y += ny * overlap * ratio1
-                    fruit.x -= nx * overlap * ratio2
-                    fruit.y -= ny * overlap * ratio2
-
-                    relative_vx = self.vx - fruit.vx
-                    relative_vy = self.vy - fruit.vy
-                    dot_product = relative_vx * nx + relative_vy * ny
-
-                    if dot_product < 0:
-                        impulse = -(1 + BOUNCE) * dot_product / 2
-                        self.vx += impulse * nx * ratio1
-                        self.vy += impulse * ny * ratio1
-                        fruit.vx -= impulse * nx * ratio2
-                        fruit.vy -= impulse * ny * ratio2
 
         self.x = max(self.radius, min(WIDTH - self.radius, self.x))
         self.y = max(self.radius, min(HEIGHT - 20 - self.radius, self.y))
         
-        if self.falling and abs(self.vx) < 0.5 and abs(self.vy) < 0.5:
+        if self.falling and abs(self.vx) < 0.3 and abs(self.vy) < 0.3:
             self.vx = 0
             self.vy = 0
             self.falling = False
@@ -138,6 +116,45 @@ class Fruit:
         else:
             pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.radius)
             pygame.draw.circle(surface, WHITE, (int(self.x) - self.radius // 3, int(self.y) - self.radius // 3), self.radius // 5)
+
+def resolve_collisions(fruits):
+    for _ in range(COLLISION_ITERATIONS):
+        for i, fruit1 in enumerate(fruits):
+            for j, fruit2 in enumerate(fruits):
+                if i < j and not fruit1.merged and not fruit2.merged:
+                    dx = fruit1.x - fruit2.x
+                    dy = fruit1.y - fruit2.y
+                    dist = math.sqrt(dx * dx + dy * dy)
+                    min_dist = fruit1.radius + fruit2.radius
+
+                    if dist < min_dist and dist > 0:
+                        overlap = min_dist - dist
+                        nx = dx / dist
+                        ny = dy / dist
+                        
+                        total_mass = fruit1.radius * fruit1.radius + fruit2.radius * fruit2.radius
+                        ratio1 = (fruit2.radius * fruit2.radius) / total_mass
+                        ratio2 = (fruit1.radius * fruit1.radius) / total_mass
+                        
+                        fruit1.x += nx * overlap * ratio1
+                        fruit1.y += ny * overlap * ratio1
+                        fruit2.x -= nx * overlap * ratio2
+                        fruit2.y -= ny * overlap * ratio2
+
+                        relative_vx = fruit1.vx - fruit2.vx
+                        relative_vy = fruit1.vy - fruit2.vy
+                        dot_product = relative_vx * nx + relative_vy * ny
+
+                        if dot_product < 0:
+                            impulse = -(1 + BOUNCE) * dot_product / 2
+                            fruit1.vx += impulse * nx * ratio1
+                            fruit1.vy += impulse * ny * ratio1
+                            fruit2.vx -= impulse * nx * ratio2
+                            fruit2.vy -= impulse * ny * ratio2
+
+        for fruit in fruits:
+            fruit.x = max(fruit.radius, min(WIDTH - fruit.radius, fruit.x))
+            fruit.y = max(fruit.radius, min(HEIGHT - 20 - fruit.radius, fruit.y))
 
 def check_merge(fruits, score):
     to_remove = []
@@ -226,6 +243,8 @@ def main():
 
             for fruit in fruits:
                 fruit.update(fruits)
+            
+            resolve_collisions(fruits)
 
             score = check_merge(fruits, score)
 
