@@ -3,8 +3,9 @@ import sys
 import os
 import glob
 import random
+import torch
 from game_logic import MergeFruitGame, WIDTH, HEIGHT, DEATH_LINE, FRUIT_TYPES, Fruit, resolve_collisions, check_merge, check_game_over
-from q_agent import QLearningAgent
+from dqn_agent import DQNAgent
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -41,18 +42,22 @@ def demo_with_visualization():
         except:
             pass
 
-    q_table_files = glob.glob('training_data/q_table_*.json')
-    if not q_table_files:
-        print("No trained Q-table found! Please run train.py first.")
+    model_files = glob.glob('training_data/dqn_model_*.pt')
+    if not model_files:
+        print("No trained DQN model found! Please run train.py first.")
         return
 
-    latest_q_table = max(q_table_files, key=os.path.getctime)
-    print(f"Loading Q-table from: {latest_q_table}")
+    latest_model = max(model_files, key=os.path.getctime)
+    print(f"Loading DQN model from: {latest_model}")
 
     game = MergeFruitGame()
     action_space = game.get_action_space()
-    agent = QLearningAgent(action_space)
-    agent.load_q_table(latest_q_table)
+    state = game.reset()
+    state_size = len(state)
+    
+    agent = DQNAgent(state_size, action_space)
+    agent.load_model(latest_model)
+    print("Model loaded successfully!")
 
     running = True
     fruits = []
@@ -87,6 +92,12 @@ def demo_with_visualization():
 
         if not game_over:
             if not waiting_for_stable:
+                # 更新游戏状态以匹配当前水果
+                game.fruits = fruits
+                game.score = score
+                game.death_timer = death_timer
+                game.next_type = next_type
+                
                 state = game.get_state()
                 action = agent.choose_action(state, training=False)
                 col_width = WIDTH / game.get_action_space()
