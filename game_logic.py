@@ -1,6 +1,7 @@
 import random
 import math
 import os
+from reward_system import calculate_reward
 
 WIDTH = 600
 HEIGHT = 900
@@ -260,14 +261,8 @@ class MergeFruitGame:
 
         self.game_over, self.death_timer = check_game_over(self.fruits, self.death_timer)
 
-        reward = 0
-        if total_merged_points > 0:
-            reward += total_merged_points
-            if any(f.type_idx == 10 for f in self.fruits):
-                reward += 100
-        
-        if self.game_over:
-            reward -= 1000
+        # 使用奖励系统计算奖励
+        reward = calculate_reward(total_merged_points, self.fruits, self.game_over)
         
         return self.get_state(), reward, self.game_over, {"score": self.score}
 
