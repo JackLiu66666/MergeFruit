@@ -13,14 +13,22 @@ class DQN(nn.Module):
         self.fc1 = nn.Linear(state_size, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 128)
-        self.fc4 = nn.Linear(128, action_size)
+        
+        # Dueling DQN分支
+        self.value_stream = nn.Linear(128, 1)
+        self.advantage_stream = nn.Linear(128, action_size)
         
     def forward(self, x):
         x = self.norm(x)
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         x = torch.relu(self.fc3(x))
-        return self.fc4(x)
+
+        value = self.value_stream(x)
+        advantage = self.advantage_stream(x)
+        
+        q_values = value + (advantage - advantage.mean(dim=1, keepdim=True))
+        return q_values
 
 class DQNAgent:
     def __init__(self, state_size, action_space, learning_rate=0.001, discount_factor=0.99, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, batch_size=64, memory_size=20000):
@@ -103,5 +111,15 @@ class DQNAgent:
         torch.save(self.policy_net.state_dict(), filepath)
     
     def load_model(self, filepath):
-        self.policy_net.load_state_dict(torch.load(filepath))
+        # 加载模型权重，使用strict=False来处理模型架构变化
+        state_dict = torch.load(filepath)
+        
+        # 检查是否缺少LayerNorm参数
+        if "norm.weight" not in state_dict:
+            # 对于旧模型，只加载存在的参数
+            self.policy_net.load_state_dict(state_dict, strict=False)
+        else:
+            # 对于新模型，正常加载
+            self.policy_net.load_state_dict(state_dict)
+        
         self.target_net.load_state_dict(self.policy_net.state_dict())

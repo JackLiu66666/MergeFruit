@@ -125,7 +125,7 @@ def demo_with_visualization():
                 fruit.update(fruits)
             
             resolve_collisions(fruits)
-            score, _ = check_merge(fruits, score)
+            score, _, _, _ = check_merge(fruits, score)
 
             game_over, death_timer = check_game_over(fruits, death_timer)
 
