@@ -178,11 +178,32 @@ def get_grid_state(fruits):
     cell_height = (HEIGHT - 20) / GRID_ROWS
 
     for fruit in fruits:
-        col = int(fruit.x / cell_width)
-        row = int(fruit.y / cell_height)
-        col = max(0, min(GRID_COLS - 1, col))
-        row = max(0, min(GRID_ROWS - 1, row))
-        grid[row][col] = fruit.type_idx
+        # 计算水果覆盖的所有单元格
+        fruit_radius = fruit.radius
+        min_x = max(0, fruit.x - fruit_radius)
+        max_x = min(WIDTH, fruit.x + fruit_radius)
+        min_y = max(0, fruit.y - fruit_radius)
+        max_y = min(HEIGHT - 20, fruit.y + fruit_radius)
+
+        # 计算覆盖的列范围
+        min_col = int(min_x / cell_width)
+        max_col = int(max_x / cell_width)
+        # 计算覆盖的行范围
+        min_row = int(min_y / cell_height)
+        max_row = int(max_y / cell_height)
+
+        # 确保索引在有效范围内
+        min_col = max(0, min_col)
+        max_col = min(GRID_COLS - 1, max_col)
+        min_row = max(0, min_row)
+        max_row = min(GRID_ROWS - 1, max_row)
+
+        # 标记所有被覆盖的单元格，保留较大的水果
+        for row in range(min_row, max_row + 1):
+            for col in range(min_col, max_col + 1):
+                # 只有当当前单元格为空或新水果更大时才更新
+                if grid[row][col] < fruit.type_idx:
+                    grid[row][col] = fruit.type_idx
 
     flat_grid = []
     for row in grid:
