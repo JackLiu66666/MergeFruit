@@ -158,8 +158,7 @@ def get_grid_state(fruits):
         row = int(fruit.y / cell_height)
         col = max(0, min(GRID_COLS - 1, col))
         row = max(0, min(GRID_ROWS - 1, row))
-        if grid[row][col] == -1:
-            grid[row][col] = fruit.type_idx
+        grid[row][col] = fruit.type_idx
 
     flat_grid = []
     for row in grid:
@@ -202,6 +201,10 @@ class MergeFruitGame:
 
     def get_state(self):
         grid_state = get_grid_state(self.fruits)
+        # 计算活跃单元格数量
+        active_cells = sum(1 for s in grid_state if s != -1)
+        # 打印水果数量和活跃单元格数量
+        # print(f"Fruits: {len(self.fruits)}, Active cells: {active_cells}")
         state = grid_state + [self.next_type]
         return tuple(state)
 
