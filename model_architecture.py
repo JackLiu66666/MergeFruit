@@ -7,11 +7,14 @@ class DQN(nn.Module):
         
         # 默认隐藏层大小
         if hidden_sizes is None:
-            hidden_sizes = [512, 256, 128]
+            hidden_sizes = [128, 64]
         
         # 构建网络层
         layers = []
         input_size = state_size
+        
+        # 输入层归一化
+        layers.append(nn.LayerNorm(input_size))
         
         for hidden_size in hidden_sizes:
             layers.append(nn.Linear(input_size, hidden_size))

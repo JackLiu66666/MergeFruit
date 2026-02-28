@@ -9,12 +9,14 @@ from collections import deque
 class DQN(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQN, self).__init__()
+        self.norm = nn.LayerNorm(state_size)
         self.fc1 = nn.Linear(state_size, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 128)
         self.fc4 = nn.Linear(128, action_size)
         
     def forward(self, x):
+        x = self.norm(x)
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         x = torch.relu(self.fc3(x))
@@ -43,7 +45,7 @@ class DQNAgent:
         self.target_net.eval()
         
         # 优化器
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=learning_rate)
+        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
     
     def choose_action(self, state, training=True):
