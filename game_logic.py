@@ -122,6 +122,8 @@ def check_merge(fruits, score):
     to_remove = []
     new_fruits = []
     merged_points = 0
+    merge_count = 0
+    max_level_merge_count = 0
 
     # 只处理未合并的水果
     active_fruits = [fruit for fruit in fruits if not fruit.merged]
@@ -159,13 +161,16 @@ def check_merge(fruits, score):
                     points = FRUIT_TYPES[new_type]["points"]
                     score += points
                     merged_points += points
+                    merge_count += 1
+                    if new_type == MAX_FRUITS - 1:
+                        max_level_merge_count += 1
 
     for fruit in to_remove:
         if fruit in fruits:
             fruits.remove(fruit)
 
     fruits.extend(new_fruits)
-    return score, merged_points
+    return score, merged_points, merge_count, max_level_merge_count
 
 def get_grid_state(fruits):
     grid = [[-1 for _ in range(GRID_COLS)] for _ in range(GRID_ROWS)]
@@ -216,6 +221,8 @@ class MergeFruitGame:
         self.game_over = False
         self.death_timer = 0
         self.next_type = random.randint(0, 4)
+        self.merge_count = 0  # 成功合成的水果次数
+        self.max_level_merge_count = 0  # 最高等级水果合成次数
         return self.get_state()
 
     def get_state(self):
@@ -252,8 +259,10 @@ class MergeFruitGame:
                 if not fruit.merged:
                     fruit.update(self.fruits)
             resolve_collisions(self.fruits)
-            self.score, merged_points = check_merge(self.fruits, self.score)
+            self.score, merged_points, merge_count, max_level_merge_count = check_merge(self.fruits, self.score)
             total_merged_points += merged_points
+            self.merge_count += merge_count
+            self.max_level_merge_count += max_level_merge_count
             
             if check_stable(self.fruits):
                 stable = True
@@ -264,7 +273,7 @@ class MergeFruitGame:
         # 使用奖励系统计算奖励
         reward = calculate_reward(total_merged_points, self.fruits, self.game_over)
         
-        return self.get_state(), reward, self.game_over, {"score": self.score}
+        return self.get_state(), reward, self.game_over, {"score": self.score, "merge_count": self.merge_count, "max_level_merge_count": self.max_level_merge_count}
 
     def get_action_space(self):
         return GRID_COLS

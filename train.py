@@ -19,7 +19,7 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
     model_filepath = f'training_data/dqn_model_{timestamp}.pt'
     
     with open(csv_filepath, 'w', newline='') as csvfile:
-        fieldnames = ['episode', 'score', 'total_reward', 'epsilon', 'steps', 'avg_loss']
+        fieldnames = ['episode', 'score', 'total_reward', 'epsilon', 'steps', 'avg_loss', 'merge_rate', 'max_level_merges']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         
@@ -60,16 +60,25 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
             # 计算平均损失
             avg_loss = total_loss / loss_count if loss_count > 0 else 0.0
             
+            # 计算合成率
+            merge_count = info.get('merge_count', 0)
+            merge_rate = (merge_count / steps * 100) if steps > 0 else 0.0
+            
+            # 获取最高等级水果合成次数
+            max_level_merges = info.get('max_level_merge_count', 0)
+            
             writer.writerow({
                 'episode': episode + 1,
                 'score': info['score'],
                 'total_reward': total_reward,
                 'epsilon': agent.epsilon,
                 'steps': steps,
-                'avg_loss': avg_loss
+                'avg_loss': avg_loss,
+                'merge_rate': merge_rate,
+                'max_level_merges': max_level_merges
             })
             
-            print(f"Episode {episode + 1}/{num_episodes} completed! Score: {info['score']}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}, Avg Loss: {avg_loss:.4f}")
+            print(f"Episode {episode + 1}/{num_episodes} completed! Score: {info['score']}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}, Avg Loss: {avg_loss:.4f}, Merge Rate: {merge_rate:.2f}%, Max Level Merges: {max_level_merges}")
             
             if (episode + 1) % save_interval == 0:
                 agent.save_model(model_filepath)
