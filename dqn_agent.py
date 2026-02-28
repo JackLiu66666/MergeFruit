@@ -9,17 +9,19 @@ from collections import deque
 class DQN(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 256)
-        self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, action_size)
+        self.fc1 = nn.Linear(state_size, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(128, action_size)
         
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        return self.fc3(x)
+        x = torch.relu(self.fc3(x))
+        return self.fc4(x)
 
 class DQNAgent:
-    def __init__(self, state_size, action_space, learning_rate=0.001, discount_factor=0.99, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, batch_size=64, memory_size=10000):
+    def __init__(self, state_size, action_space, learning_rate=0.001, discount_factor=0.99, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, batch_size=128, memory_size=20000):
         self.state_size = state_size
         self.action_space = action_space
         self.learning_rate = learning_rate
@@ -56,31 +58,32 @@ class DQNAgent:
     def store_experience(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
     
-    def learn(self):
+    def learn(self, num_updates=4):
         if len(self.memory) < self.batch_size:
             return
         
-        batch = random.sample(self.memory, self.batch_size)
-        states, actions, rewards, next_states, dones = zip(*batch)
-        
-        states = torch.FloatTensor(states).to(self.device)
-        actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
-        rewards = torch.FloatTensor(rewards).to(self.device)
-        next_states = torch.FloatTensor(next_states).to(self.device)
-        dones = torch.FloatTensor(dones).to(self.device)
-        
-        # 计算当前状态的Q值
-        current_q = self.policy_net(states).gather(1, actions).squeeze(1)
-        
-        # 计算下一个状态的最大Q值
-        next_q = self.target_net(next_states).max(1)[0]
-        target_q = rewards + (1 - dones) * self.discount_factor * next_q
-        
-        # 计算损失并更新网络
-        loss = self.criterion(current_q, target_q)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        for _ in range(num_updates):
+            batch = random.sample(self.memory, self.batch_size)
+            states, actions, rewards, next_states, dones = zip(*batch)
+            
+            states = torch.FloatTensor(states).to(self.device)
+            actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
+            rewards = torch.FloatTensor(rewards).to(self.device)
+            next_states = torch.FloatTensor(next_states).to(self.device)
+            dones = torch.FloatTensor(dones).to(self.device)
+            
+            # 计算当前状态的Q值
+            current_q = self.policy_net(states).gather(1, actions).squeeze(1)
+            
+            # 计算下一个状态的最大Q值
+            next_q = self.target_net(next_states).max(1)[0]
+            target_q = rewards + (1 - dones) * self.discount_factor * next_q
+            
+            # 计算损失并更新网络
+            loss = self.criterion(current_q, target_q)
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
     
     def update_target_network(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())

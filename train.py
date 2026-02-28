@@ -34,7 +34,7 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
                 next_state, reward, done, info = game.step(action)
                 
                 agent.store_experience(state, action, reward, next_state, done)
-                agent.learn()
+                agent.learn(num_updates=4)
                 
                 state = next_state
                 total_reward += reward

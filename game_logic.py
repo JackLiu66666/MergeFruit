@@ -72,41 +72,48 @@ class Fruit:
             self.falling = False
 
 def resolve_collisions(fruits):
+    # 只处理未合并的水果
+    active_fruits = [fruit for fruit in fruits if not fruit.merged]
+    num_fruits = len(active_fruits)
+    
     for _ in range(COLLISION_ITERATIONS):
-        for i, fruit1 in enumerate(fruits):
-            for j, fruit2 in enumerate(fruits):
-                if i < j and not fruit1.merged and not fruit2.merged:
-                    dx = fruit1.x - fruit2.x
-                    dy = fruit1.y - fruit2.y
-                    dist = math.sqrt(dx * dx + dy * dy)
-                    min_dist = fruit1.radius + fruit2.radius
+        for i in range(num_fruits):
+            fruit1 = active_fruits[i]
+            for j in range(i + 1, num_fruits):
+                fruit2 = active_fruits[j]
+                dx = fruit1.x - fruit2.x
+                dy = fruit1.y - fruit2.y
+                dist_sq = dx * dx + dy * dy
+                min_dist = fruit1.radius + fruit2.radius
+                min_dist_sq = min_dist * min_dist
 
-                    if dist < min_dist and dist > 0:
-                        overlap = min_dist - dist
-                        nx = dx / dist
-                        ny = dy / dist
-                        
-                        total_mass = fruit1.radius * fruit1.radius + fruit2.radius * fruit2.radius
-                        ratio1 = (fruit2.radius * fruit2.radius) / total_mass
-                        ratio2 = (fruit1.radius * fruit1.radius) / total_mass
-                        
-                        fruit1.x += nx * overlap * ratio1
-                        fruit1.y += ny * overlap * ratio1
-                        fruit2.x -= nx * overlap * ratio2
-                        fruit2.y -= ny * overlap * ratio2
+                if dist_sq < min_dist_sq and dist_sq > 0:
+                    dist = math.sqrt(dist_sq)
+                    overlap = min_dist - dist
+                    nx = dx / dist
+                    ny = dy / dist
+                    
+                    total_mass = fruit1.radius * fruit1.radius + fruit2.radius * fruit2.radius
+                    ratio1 = (fruit2.radius * fruit2.radius) / total_mass
+                    ratio2 = (fruit1.radius * fruit1.radius) / total_mass
+                    
+                    fruit1.x += nx * overlap * ratio1
+                    fruit1.y += ny * overlap * ratio1
+                    fruit2.x -= nx * overlap * ratio2
+                    fruit2.y -= ny * overlap * ratio2
 
-                        relative_vx = fruit1.vx - fruit2.vx
-                        relative_vy = fruit1.vy - fruit2.vy
-                        dot_product = relative_vx * nx + relative_vy * ny
+                    relative_vx = fruit1.vx - fruit2.vx
+                    relative_vy = fruit1.vy - fruit2.vy
+                    dot_product = relative_vx * nx + relative_vy * ny
 
-                        if dot_product < 0:
-                            impulse = -(1 + BOUNCE) * dot_product / 2
-                            fruit1.vx += impulse * nx * ratio1
-                            fruit1.vy += impulse * ny * ratio1
-                            fruit2.vx -= impulse * nx * ratio2
-                            fruit2.vy -= impulse * ny * ratio2
+                    if dot_product < 0:
+                        impulse = -(1 + BOUNCE) * dot_product / 2
+                        fruit1.vx += impulse * nx * ratio1
+                        fruit1.vy += impulse * ny * ratio1
+                        fruit2.vx -= impulse * nx * ratio2
+                        fruit2.vy -= impulse * ny * ratio2
 
-        for fruit in fruits:
+        for fruit in active_fruits:
             fruit.x = max(fruit.radius, min(WIDTH - fruit.radius, fruit.x))
             fruit.y = max(fruit.radius, min(HEIGHT - 20 - fruit.radius, fruit.y))
 
@@ -115,31 +122,42 @@ def check_merge(fruits, score):
     new_fruits = []
     merged_points = 0
 
-    for i, fruit1 in enumerate(fruits):
-        for j, fruit2 in enumerate(fruits):
-            if i < j and not fruit1.merged and not fruit2.merged and fruit1.type_idx == fruit2.type_idx:
-                dx = fruit1.x - fruit2.x
-                dy = fruit1.y - fruit2.y
-                dist = math.sqrt(dx * dx + dy * dy)
-                min_dist = fruit1.radius + fruit2.radius
+    # 只处理未合并的水果
+    active_fruits = [fruit for fruit in fruits if not fruit.merged]
+    num_fruits = len(active_fruits)
 
-                if dist < min_dist + 5:
-                    fruit1.merged = True
-                    fruit2.merged = True
-                    to_remove.append(fruit1)
-                    to_remove.append(fruit2)
+    for i in range(num_fruits):
+        fruit1 = active_fruits[i]
+        if fruit1.merged:
+            continue
+        for j in range(i + 1, num_fruits):
+            fruit2 = active_fruits[j]
+            if fruit2.merged or fruit1.type_idx != fruit2.type_idx:
+                continue
+            
+            dx = fruit1.x - fruit2.x
+            dy = fruit1.y - fruit2.y
+            dist_sq = dx * dx + dy * dy
+            min_dist = fruit1.radius + fruit2.radius
+            min_dist_sq = (min_dist + 5) ** 2
 
-                    new_x = (fruit1.x + fruit2.x) / 2
-                    new_y = (fruit1.y + fruit2.y) / 2
-                    new_type = fruit1.type_idx + 1
+            if dist_sq < min_dist_sq:
+                fruit1.merged = True
+                fruit2.merged = True
+                to_remove.append(fruit1)
+                to_remove.append(fruit2)
 
-                    if new_type < MAX_FRUITS:
-                        new_fruit = Fruit(new_x, new_y, new_type)
-                        new_fruit.falling = True
-                        new_fruits.append(new_fruit)
-                        points = FRUIT_TYPES[new_type]["points"]
-                        score += points
-                        merged_points += points
+                new_x = (fruit1.x + fruit2.x) / 2
+                new_y = (fruit1.y + fruit2.y) / 2
+                new_type = fruit1.type_idx + 1
+
+                if new_type < MAX_FRUITS:
+                    new_fruit = Fruit(new_x, new_y, new_type)
+                    new_fruit.falling = True
+                    new_fruits.append(new_fruit)
+                    points = FRUIT_TYPES[new_type]["points"]
+                    score += points
+                    merged_points += points
 
     for fruit in to_remove:
         if fruit in fruits:
@@ -224,12 +242,14 @@ class MergeFruitGame:
         
         total_merged_points = 0
         stable = False
-        max_iterations = 1000
+        max_iterations = 100
         iteration = 0
         
         while not stable and iteration < max_iterations:
+            # 只更新未合并的水果
             for fruit in self.fruits:
-                fruit.update(self.fruits)
+                if not fruit.merged:
+                    fruit.update(self.fruits)
             resolve_collisions(self.fruits)
             self.score, merged_points = check_merge(self.fruits, self.score)
             total_merged_points += merged_points
