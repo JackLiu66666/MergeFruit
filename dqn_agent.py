@@ -21,7 +21,7 @@ class DQN(nn.Module):
         return self.fc4(x)
 
 class DQNAgent:
-    def __init__(self, state_size, action_space, learning_rate=0.001, discount_factor=0.99, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, batch_size=128, memory_size=20000):
+    def __init__(self, state_size, action_space, learning_rate=0.001, discount_factor=0.99, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, batch_size=64, memory_size=20000):
         self.state_size = state_size
         self.action_space = action_space
         self.learning_rate = learning_rate
@@ -60,8 +60,9 @@ class DQNAgent:
     
     def learn(self, num_updates=4):
         if len(self.memory) < self.batch_size:
-            return
+            return 0.0
         
+        total_loss = 0.0
         for _ in range(num_updates):
             batch = random.sample(self.memory, self.batch_size)
             states, actions, rewards, next_states, dones = zip(*batch)
@@ -81,9 +82,12 @@ class DQNAgent:
             
             # 计算损失并更新网络
             loss = self.criterion(current_q, target_q)
+            total_loss += loss.item()
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+        
+        return total_loss / num_updates
     
     def update_target_network(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())

@@ -19,7 +19,7 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
     model_filepath = f'training_data/dqn_model_{timestamp}.pt'
     
     with open(csv_filepath, 'w', newline='') as csvfile:
-        fieldnames = ['episode', 'score', 'total_reward', 'epsilon', 'steps']
+        fieldnames = ['episode', 'score', 'total_reward', 'epsilon', 'steps', 'avg_loss']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         
@@ -28,23 +28,28 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
             total_reward = 0
             steps = 0
             done = False
+            total_loss = 0.0
+            loss_count = 0
             
             while not done:
                 action = agent.choose_action(state, training=True)
                 next_state, reward, done, info = game.step(action)
                 
                 agent.store_experience(state, action, reward, next_state, done)
-                agent.learn(num_updates=4)
+                loss = agent.learn(num_updates=4)
+                if loss > 0:
+                    total_loss += loss
+                    loss_count += 1
                 
                 state = next_state
                 total_reward += reward
                 steps += 1
                 
-                # 计算活跃单元格数量
-                active_cells = sum(1 for s in state[:-1] if s != -1)
-                if steps % 15 == 0:
-                    non_zero_state = [s for s in state[:-1] if s != -1]
-                    print(f"Episode: {episode+1}/{num_episodes}, Step: {steps}, Active cells: {active_cells}, State: {non_zero_state}, Action: {action}, Reward: {reward}, Score: {info['score']}")
+                # # 计算活跃单元格数量
+                # active_cells = sum(1 for s in state[:-1] if s != -1)
+                # if steps % 15 == 0:
+                #     non_zero_state = [s for s in state[:-1] if s != -1]
+                #     print(f"Episode: {episode+1}/{num_episodes}, Step: {steps}, Active cells: {active_cells}, State: {non_zero_state}, Action: {action}, Reward: {reward}, Score: {info['score']}")
             
             agent.decay_epsilon()
             
@@ -52,15 +57,19 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
             if episode % target_update == 0:
                 agent.update_target_network()
             
+            # 计算平均损失
+            avg_loss = total_loss / loss_count if loss_count > 0 else 0.0
+            
             writer.writerow({
                 'episode': episode + 1,
                 'score': info['score'],
                 'total_reward': total_reward,
                 'epsilon': agent.epsilon,
-                'steps': steps
+                'steps': steps,
+                'avg_loss': avg_loss
             })
             
-            print(f"Episode {episode + 1}/{num_episodes} completed! Score: {info['score']}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}")
+            print(f"Episode {episode + 1}/{num_episodes} completed! Score: {info['score']}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.4f}, Avg Loss: {avg_loss:.4f}")
             
             if (episode + 1) % save_interval == 0:
                 agent.save_model(model_filepath)
