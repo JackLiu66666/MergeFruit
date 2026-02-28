@@ -38,9 +38,9 @@ def train_agent(num_episodes=5000, save_interval=500):
                 
                 # 计算活跃单元格数量
                 active_cells = sum(1 for s in state[:-1] if s != -1)
-                # 打印活跃单元格数量和状态中所有非-1的元素
-                non_zero_state = [s for s in state[:-1] if s != -1]
-                print(f"Episode: {episode+1}/{num_episodes}, Step: {steps}, Active cells: {active_cells}, State: {non_zero_state}, Action: {action}, Reward: {reward}, Score: {info['score']}")
+                if steps % 15 == 0:
+                    non_zero_state = [s for s in state[:-1] if s != -1]
+                    print(f"Episode: {episode+1}/{num_episodes}, Step: {steps}, Active cells: {active_cells}, State: {non_zero_state}, Action: {action}, Reward: {reward}, Score: {info['score']}")
             
             agent.decay_epsilon()
             
