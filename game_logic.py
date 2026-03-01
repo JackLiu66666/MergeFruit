@@ -16,17 +16,17 @@ GRID_COLS = 20
 GRID_ROWS = 30
 
 FRUIT_TYPES = [
-    {"name": "grape", "radius": 30, "color": (255, 0, 0), "points": 1},
-    {"name": "strawberry", "radius": 40, "color": (255, 100, 100), "points": 3},
-    {"name": "lemon", "radius": 50, "color": (128, 0, 128), "points": 6},
-    {"name": "orange", "radius": 60, "color": (255, 165, 0), "points": 10},
-    {"name": "kiwi", "radius": 70, "color": (255, 69, 0), "points": 15},
-    {"name": "tomato", "radius": 80, "color": (255, 215, 0), "points": 21},
-    {"name": "peach", "radius": 90, "color": (255, 182, 193), "points": 28},
-    {"name": "pineapple", "radius": 100, "color": (255, 200, 50), "points": 36},
-    {"name": "coconut", "radius": 110, "color": (144, 238, 144), "points": 45},
-    {"name": "half-watermelon", "radius": 120, "color": (0, 128, 0), "points": 55},
-    {"name": "big_watermelon", "radius": 140, "color": (0, 100, 0), "points": 66}
+    {"name": "grape", "radius": 30, "color": (102, 51, 153), "points": 1},      # 紫葡萄（深紫色）
+    {"name": "strawberry", "radius": 40, "color": (239, 41, 41), "points": 3},  # 草莓（鲜红色）
+    {"name": "lemon", "radius": 50, "color": (255, 247, 0), "points": 6},        # 柠檬（亮黄色）
+    {"name": "orange", "radius": 60, "color": (255, 165, 0), "points": 10},      # 橙子（橙黄色）
+    {"name": "kiwi", "radius": 70, "color": (143, 188, 143), "points": 15},      # 猕猴桃（青绿色）
+    {"name": "tomato", "radius": 80, "color": (220, 20, 60), "points": 21},      # 番茄（大红色）
+    {"name": "peach", "radius": 90, "color": (255, 182, 193), "points": 28},     # 桃子（浅粉色）
+    {"name": "pineapple", "radius": 100, "color": (255, 213, 0), "points": 36},  # 菠萝（金黄色）
+    {"name": "coconut", "radius": 110, "color": (245, 245, 220), "points": 45},  # 椰子（米白色）
+    {"name": "half-watermelon", "radius": 120, "color": (255, 0, 0), "points": 55}, 
+    {"name": "big_watermelon", "radius": 140, "color": (0, 128, 0), "points": 66}     
 ]
 
 class Fruit:

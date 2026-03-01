@@ -65,6 +65,15 @@ class DQNAgent:
             q_values = self.policy_net(state)
         return q_values.argmax().item()
     
+    def get_q_values(self, state):
+        """
+        获取给定状态下所有动作的 Q 值
+        """
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            q_values = self.policy_net(state)
+        return q_values.squeeze().cpu().numpy()
+    
     def store_experience(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
     
