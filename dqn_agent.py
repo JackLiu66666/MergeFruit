@@ -31,7 +31,7 @@ class DQN(nn.Module):
         return q_values
 
 class DQNAgent:
-    def __init__(self, state_size, action_space, learning_rate=0.001, discount_factor=0.99, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, batch_size=64, memory_size=20000):
+    def __init__(self, state_size, action_space, learning_rate=0.00025, discount_factor=0.95, epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.997, batch_size=64, memory_size=20000):
         self.state_size = state_size
         self.action_space = action_space
         self.learning_rate = learning_rate
@@ -110,7 +110,7 @@ class DQNAgent:
         
         return total_loss / num_updates
     
-    def update_target_network(self, tau=0.001):
+    def update_target_network(self, tau=0.01):
         """
         使用软更新策略更新目标网络
         tau: 软更新参数，控制目标网络更新的速度
@@ -118,9 +118,29 @@ class DQNAgent:
         for target_param, local_param in zip(self.target_net.parameters(), self.policy_net.parameters()):
             target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
     
-    def decay_epsilon(self):
-        if self.epsilon > self.epsilon_end:
-            self.epsilon *= self.epsilon_decay
+    def decay_epsilon(self, episode=None, total_episodes=None):
+        """
+        更智能的epsilon衰减策略
+        前1/3阶段：快速下降
+        中间1/3阶段：缓慢下降
+        后1/3阶段：保持在最低值附近但仍有少量探索
+        """
+        if episode is not None and total_episodes is not None:
+            progress = episode / total_episodes
+            if progress < 0.33:
+                # 前1/3阶段：从1.0降到0.3
+                self.epsilon = 1.0 - (0.7 * progress / 0.33)
+            elif progress < 0.66:
+                # 中间1/3阶段：从0.3降到0.1
+                self.epsilon = 0.3 - (0.2 * (progress - 0.33) / 0.33)
+            else:
+                # 后1/3阶段：从0.1降到epsilon_end
+                self.epsilon = 0.1 - (0.05 * (progress - 0.66) / 0.34)
+                self.epsilon = max(self.epsilon, self.epsilon_end)
+        else:
+            # 保持原有的指数衰减作为后备方案
+            if self.epsilon > self.epsilon_end:
+                self.epsilon *= self.epsilon_decay
     
     def save_model(self, filepath):
         os.makedirs(os.path.dirname(filepath), exist_ok=True)

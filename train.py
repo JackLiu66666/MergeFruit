@@ -36,13 +36,10 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
                 next_state, reward, done, info = game.step(action)
                 
                 agent.store_experience(state, action, reward, next_state, done)
-                loss = agent.learn(num_updates=4)
+                loss = agent.learn(num_updates=1)
                 if loss > 0:
                     total_loss += loss
                     loss_count += 1
-                
-                # 每次step都进行目标网络软更新
-                agent.update_target_network()
                 
                 state = next_state
                 total_reward += int(reward)
@@ -54,7 +51,10 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
                 #     non_zero_state = [s for s in state[:-1] if s != -1]
                 #     print(f"Episode: {episode+1}/{num_episodes}, Step: {steps}, Active cells: {active_cells}, State: {non_zero_state}, Action: {action}, Reward: {reward}, Score: {info['score']}")
             
-            agent.decay_epsilon()
+            agent.decay_epsilon(episode=episode, total_episodes=num_episodes)
+            
+            # 每个episode结束时进行目标网络软更新
+            agent.update_target_network()
             
             # 计算平均损失
             avg_loss = total_loss / loss_count if loss_count > 0 else 0.0
