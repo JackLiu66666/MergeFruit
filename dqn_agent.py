@@ -95,12 +95,19 @@ class DQNAgent:
             total_loss += loss.item()
             self.optimizer.zero_grad()
             loss.backward()
+            # 添加梯度裁剪，防止梯度爆炸
+            torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 1.0)
             self.optimizer.step()
         
         return total_loss / num_updates
     
-    def update_target_network(self):
-        self.target_net.load_state_dict(self.policy_net.state_dict())
+    def update_target_network(self, tau=0.001):
+        """
+        使用软更新策略更新目标网络
+        tau: 软更新参数，控制目标网络更新的速度
+        """
+        for target_param, local_param in zip(self.target_net.parameters(), self.policy_net.parameters()):
+            target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
     
     def decay_epsilon(self):
         if self.epsilon > self.epsilon_end:

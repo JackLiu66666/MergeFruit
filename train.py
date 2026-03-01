@@ -41,8 +41,11 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
                     total_loss += loss
                     loss_count += 1
                 
+                # 每次step都进行目标网络软更新
+                agent.update_target_network()
+                
                 state = next_state
-                total_reward += reward
+                total_reward += int(reward)
                 steps += 1
                 
                 # # 计算活跃单元格数量
@@ -52,10 +55,6 @@ def train_agent(num_episodes=5000, save_interval=500, target_update=10):
                 #     print(f"Episode: {episode+1}/{num_episodes}, Step: {steps}, Active cells: {active_cells}, State: {non_zero_state}, Action: {action}, Reward: {reward}, Score: {info['score']}")
             
             agent.decay_epsilon()
-            
-            # 更新目标网络
-            if episode % target_update == 0:
-                agent.update_target_network()
             
             # 计算平均损失
             avg_loss = total_loss / loss_count if loss_count > 0 else 0.0
